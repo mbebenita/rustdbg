@@ -3,6 +3,7 @@ CFG_CPUTYPE := $(shell uname -m)
 
 CFG_GCC_CFLAGS :=
 CFG_GCC_LINK_FLAGS :=
+CFG_CERTIFICATE_NAME := RustDbg
 
 ifeq ($(CFG_OSTYPE), Darwin)
   CFG_LIB := librustdbg.dylib
@@ -46,7 +47,7 @@ $(CFG_LIB): $(SOURCE_OBJ)
 	
 %.x86: %.cpp $(CFG_LIB)
 	g++ $(CFG_GCC_CFLAGS) -L. -lrustdbg -o $@ $<
-	codesign -s rust --resource-rules=Info.plist $@
+	codesign -s $(CFG_CERTIFICATE_NAME) $@
 
 check: $(TEST_OBJ)
 
