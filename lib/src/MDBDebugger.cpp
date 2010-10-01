@@ -2,6 +2,7 @@
 #include "MDBDebugger.h"
 #include "MDBThread.h"
 #include "MDBBreakpoint.h"
+
 #include <errno.h>
 #include <unistd.h>
 #include <mach/mach_vm.h>
@@ -88,14 +89,16 @@ bool setSingleStepDelegate(MDBDebugger *debugger, thread_t thread, void *arg) {
 }
 
 void
-MDBDebugger::logState() {
+MDBDebugger::logState(const char *name) {
     struct task_basic_info info;
     unsigned int info_count = TASK_BASIC_INFO_COUNT;
     task_info(task, TASK_BASIC_INFO, (task_info_t) &info, &info_count);
-    log("task: %d, sc: %d", task, info.suspend_count);
+    log.traceLn("=== STATE: %s =====================================================", name);
+    log.traceLn("  task: %d, sc: %d", task, info.suspend_count);
     for (uint32_t i = 0; i < threads.length(); i++) {
         threads[i]->logState();
     }
+    log.traceLn("===============================================================================");
 }
 
 bool 
@@ -110,20 +113,20 @@ MDBDebugger::suspendOrResumeNoncurrentThread(bool suspend, thread_t thread, thre
     
     kr = thread_info(thread, THREAD_BASIC_INFO, (thread_info_t) &info, &info_count);
     if (kr != KERN_SUCCESS) {
-        log("thread_info() failed when suspending thread %d", thread);
+        log.traceLn(MDBLog::DEBUG, "thread_info() failed when suspending thread %d", thread);
     } else {
         if (suspend) {
             if (info.suspend_count == 0) {
                 kr = thread_suspend(thread);
                 if (kr != KERN_SUCCESS) {
-                    log("thread_suspend() failed when suspending thread %d", thread);
+                    log.traceLn(MDBLog::DEBUG, "thread_suspend() failed when suspending thread %d", thread);
                 }
             }
         } else {
             for (uint32_t i = 0; i < (unsigned) info.suspend_count; i++) {
                 kr = thread_resume(thread);
                 if (kr != KERN_SUCCESS) {
-                    log("thread_resume() failed when resuming thread %d", thread);
+                    log.traceLn(MDBLog::DEBUG, "thread_resume() failed when resuming thread %d", thread);
                     break;
                 }
             }            
@@ -143,8 +146,16 @@ resumeNoncurrentThreadDelegate(MDBDebugger *debugger, thread_t thread, void *arg
 }
 
 bool
-MDBDebugger::resumeAllThreads() {
-    log("resuming all threads");
+MDBDebugger::suspendAllThreads() {
+    log.traceLn("suspending all threads");
+    for (uint32_t i = 0; i < threads.length(); i++) {
+        suspendThread(threads[i]);
+    }
+    return true;
+}
+
+bool
+MDBDebugger::resumeAllThreadsAndTask() {
     for (uint32_t i = 0; i < threads.length(); i++) {
         MDBThread *thread = threads[i];
         resumeThread(thread, false);
@@ -180,7 +191,7 @@ MDBDebugger::resumeThread(MDBThread *thread, bool shouldResumeTask) {
         resumeTask();
     }
     
-    log("resumed thread %d", thread->thread);
+    log.traceLn(MDBLog::DEBUG, "resumed thread: %d", thread->thread);
     return true;
 }
 
@@ -193,10 +204,10 @@ MDBDebugger::suspendThread(MDBThread *thread) {
     if (info.suspend_count == 0) {
         kr = thread_suspend(thread->thread);
         if (kr != KERN_SUCCESS) {
-            log("thread_suspend() failed when suspending thread %d", thread);
+            log.traceLn(MDBLog::DEBUG, "thread_suspend() failed when suspending thread %d", thread);
         }
     }
-    log("suspended thread %d", thread->thread);
+    log.traceLn(MDBLog::DEBUG, "suspended thread %d", thread->thread);
     return true;    
 }
 
@@ -211,14 +222,14 @@ MDBDebugger::resumeTask() {
         if (info.suspend_count > 0) {
             if (info.suspend_count > 1 && !warningPrinted) {
                 warningPrinted = true;
-                log("here");
+                log.traceLn("here");
             }
             task_resume((task_t) task);
         } else {
             break;
         }
     }
-    log("resumed task");
+    log.traceLn(MDBLog::DEBUG, "resumed task: %d", task);
     return true;
 }
 
@@ -280,7 +291,7 @@ MDBDebugger::findBreakpoint(uint64_t address) {
 }
 
 void
-MDBDebugger::deleteBreakpoints(ArrayList<MDBBreakpoint *> &list) {
+MDBDebugger::deleteBreakpoints(MBList<MDBBreakpoint *> &list) {
     for (uint32_t i = 0; i < list.length(); i++) {
         assert (list[i]->enabled == false);
         delete list[i];
@@ -295,7 +306,7 @@ MDBDebugger::deleteBreakpoints(ArrayList<MDBBreakpoint *> &list) {
  */
 void
 MDBDebugger::checkForBreakpointsAndStepBack() {
-    ArrayList<MDBBreakpoint *> breakpointWorklist;
+    MBList<MDBBreakpoint *> breakpointWorklist;
     for (uint32_t i = 0; i < threads.length(); i++) {
         MDBThread *thread = threads[i];
         MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip - 1);
@@ -313,7 +324,7 @@ MDBDebugger::checkForBreakpointsAndStepBack() {
 
 MDBProcessRunState
 MDBDebugger::wait(MDBSignal waitSignal) {
-    log(">> waiting for task ..");
+    log.traceLn(MDBLog::DEBUG, "waiting for task ..");
     int debuggeePid;
     WRAP_MACH(pid_for_task(task, &debuggeePid), PRS_UNKNOWN);
     while (true) {
@@ -321,41 +332,42 @@ MDBDebugger::wait(MDBSignal waitSignal) {
         int error;
         while ((error = waitpid(debuggeePid, &status, 0)) != debuggeePid && 
                errno == EINTR) {
-            log("waitpid failed with error: %d [%s]", errno, strerror(error));
+            log.traceLn(MDBLog::DEBUG, "waitpid failed with error: %d (%s)", errno, strerror(error));
         }
         if (error != debuggeePid) {
-            log("waitpid failed with error: %d [%s]", errno, strerror(error));
+            log.traceLn(MDBLog::DEBUG, "waitpid failed with error: %d (%s)", errno, strerror(error));
             gatherThreads();
             return PRS_UNKNOWN;
         }
         if (WIFEXITED(status)) {
-            log("process %d exited with exit code %d", debuggeePid, WEXITSTATUS(status));
+            log.traceLn(MDBLog::DEBUG, "process: %d exited with exit code: %d", debuggeePid, WEXITSTATUS(status));
             gatherThreads();
             return PRS_TERMINATED;
         }
         if (WIFSIGNALED(status)) {
             int signal = WTERMSIG(status);
-            log("process %d terminated due to signal %d [%s]", debuggeePid, signal, strsignal(signal));
+            log.traceLn(MDBLog::DEBUG, "process: %d terminated due to signal number: %d (%s)", debuggeePid, signal, strsignal(signal));
             gatherThreads();
             return PRS_TERMINATED;
         }
         if (WIFSTOPPED(status)) {
+            gatherThreads();
             // check whether the process received a signal, and continue with it if so.
             int signal = WSTOPSIG(status);
-            log("process %d stopped due to signal %d [%s]", debuggeePid, signal, strsignal(signal));
+            log.traceLn(MDBLog::DEBUG, "process: %d stopped due to signal number: %d (%s)", debuggeePid, signal, strsignal(signal));
             if (waitSignal == signal && waitSignal == TRAP) {
-                forallThreads(setSingleStepDelegate, (void *) false);
+                for (uint32_t i = 0; i < threads.length(); i++) {
+                    enableSingleStep(threads[i], false);
+                }
             }
             if (signal == 0 || signal == waitSignal) {
-                gatherThreads();
                 checkForBreakpointsAndStepBack();
-                logState();
                 return PRS_STOPPED;
             } else {
                 ptrace(PT_CONTINUE, debuggeePid, (char*) 1, signal);
                 error = errno;
                 if (error != 0) {
-                    log("continuing process %d failed: %d [%s]", error, strerror(error));
+                    log.traceLn(MDBLog::DEBUG, "continuing process %d failed: %d [%s]", error, strerror(error));
                     gatherThreads();
                     return PRS_UNKNOWN;
                 }
@@ -370,6 +382,7 @@ MDBDebugger::wait(MDBSignal waitSignal) {
  */
 bool
 MDBDebugger::step(MDBThread *thread, bool resumeAll) {
+    log.traceLn(MDBLog::CALL, "step thread: %d, resumeAll: %d", thread->thread, resumeAll);
     MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip);
     bool reEnableBreakpoint = false;
     if (breakpoint && breakpoint->enabled) {
@@ -377,21 +390,15 @@ MDBDebugger::step(MDBThread *thread, bool resumeAll) {
         reEnableBreakpoint = true;
     }
     if (resumeAll == false) {
-        for (uint32_t i = 0; i < threads.length(); i++) {
-            suspendThread(threads[i]);
-        }
+        suspendAllThreads();
     }
-    bool ret = setSingleStep(thread->thread, (void*) true) && resumeThread(thread, false);
+    enableSingleStep(thread, true);
     if (resumeAll) {
-        resumeAllThreads();
+        resumeAllThreadsAndTask();
     } else {
+        resumeThread(thread, false);
         resumeTask();
     }
-    if (ret == false) {
-        return false;
-    }
-    gatherThreads();
-    logState();
     MDBProcessRunState state = wait(TRAP);
     if (state == PRS_STOPPED) {
         if (reEnableBreakpoint) {
@@ -421,7 +428,7 @@ MDBDebugger::stepOver(MDBThread *thread, bool resumeAll) {
     MDBBreakpoint *transientBreakpoint =
         createBreakpoint(thread->state.__eip + instructionLength, true);
     transientBreakpoint->enable(true);
-    resumeAllThreads();
+    resumeAllThreadsAndTask();
     MDBProcessRunState state = wait(TRAP);
     if (state == PRS_STOPPED) {
         if (reEnableBreakpoint) {
@@ -453,7 +460,19 @@ MDBDebugger::setSingleStep(thread_t thread, void *arg) {
         state.__eflags &= ~0x100UL;
     }
     WRAP_MACH(thread_set_state(thread, THREAD_STATE_FLAVOR, (natural_t *) &state, state_count), false);
-    log("%s single step flag for thread %d.", isEnabled ? "Set" : "Removed", thread);
+    log.traceLn("%s single step flag for thread %d.", isEnabled ? "Set" : "Removed", thread);
+    return true;
+}
+
+bool
+MDBDebugger::enableSingleStep(MDBThread *thread, bool enable) {
+    if (enable) {
+        thread->state.__eflags |= 0x100UL;
+    } else {
+        thread->state.__eflags &= ~0x100UL;
+    }
+    commitThread(thread);
+    log.traceLn(MDBLog::DEBUG, "%s single step flag for thread %d", enable ? "set" : "removed", thread->thread);
     return true;
 }
 
@@ -464,7 +483,7 @@ MDBDebugger::createProcess(char** commandLineArguments) {
 		return false;
 	}
 	const char* fileName = commandLineArguments[0];
-    log("creating process %s", fileName);
+    log.traceLn("creating process %s", fileName);
 	int childPid = fork();
 	if (childPid == 0) {        
         // We're in the child process now.
@@ -472,7 +491,7 @@ MDBDebugger::createProcess(char** commandLineArguments) {
             error("Failed to initialize ptrace in forked process.");
             return ERROR;
         }
-		log("Executing target process.");
+		log.traceLn("executing target process");
         execv(commandLineArguments[0], commandLineArguments);
         error("Failed to execte (execv) target process.");
         // TODO: Notify parent task that we failed to execute target process.
@@ -482,27 +501,25 @@ MDBDebugger::createProcess(char** commandLineArguments) {
 	} else {
         // We're in the parent process now.
         int status = 0;
-        log("waiting for pid %d", childPid);
+        log.traceLn("waiting for pid %d", childPid);
         
         // Wait for the process to stop, waitpid() can fail if it is interrupted
         // by a signal, so poll until we've succeeded the system call.
         int waitPid = 0;
-        // while ((waitPid = waitpid(childPid, &status, 0)) == childPid && errno == EINTR);
-        while ((waitPid = waitpid(childPid, &status, 0)) <= 0);
-
-
-		log("res: %d %d", waitPid, errno);
+        while ((waitPid = waitpid(childPid, &status, 0)) == childPid && errno == EINTR);
+        // while ((waitPid = waitpid(childPid, &status, 0)) <= 0);
+		// log.traceLn("res: %d %d", waitPid, errno);
 	
         if (WIFSTOPPED(status)) {
-			log("sig: %d", WSTOPSIG(status));
+			// log.traceLn("sig: %d", WSTOPSIG(status));
             kern_return_t kr;
             // Get the mach task for the target process.
             kr = task_for_pid(mach_task_self(), childPid, &task);
 			RETURN_ON_MACH_ERROR("task_for_pid", kr, -1);
             this->fileName = allocateFormattedString("%s", fileName);
             gatherThreads();
-            logState();
-            log("target process created");
+            logState("stopped");
+            log.traceLn("target process created");
             return true;
         } else if (WIFEXITED(status)) {
             error("Process terminated normally.");

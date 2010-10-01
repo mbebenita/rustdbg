@@ -28,8 +28,8 @@ public:
 class MDBCodeRegionManager {
 bool scanProcedure(uintptr_t address);
 public:
-    ArrayList<MDBMachReader *> machFiles;
-    ArrayList<MDBCodeRegion *> regions;
+    MBList<MDBMachReader *> machFiles;
+    MBList<MDBCodeRegion *> regions;
     MDBDebugger *debugger;
     MDBCodeRegionManager(MDBDebugger *debugger);
     MDBCodeRegion *getRegion(uintptr_t address);

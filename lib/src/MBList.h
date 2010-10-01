@@ -1,26 +1,17 @@
-/*
- *  ArrayList.h
- *  RustDbg
- *
- *  Created by Michael Bebenita on 8/19/10.
- *  Copyright 2010 __MyCompanyName__. All rights reserved.
- *
- */
-
-#ifndef ArrayList_H
-#define ArrayList_H
+#ifndef MBList_H
+#define MBList_H
 
 /**
  * A simple, resizable array list.
  */
-template<typename T> class ArrayList {
+template<typename T> class MBList {
     static const size_t INITIAL_CAPACITY = 8;
     size_t _length;
     T * _data;
     size_t _capacity;
 public:
-    ArrayList();
-    ~ArrayList();
+    MBList();
+    ~MBList();
     size_t length();
     T add(T value);
     int32_t append(T value);
@@ -35,29 +26,29 @@ public:
 };
 
 template<typename T>
-ArrayList<T>::ArrayList() {
+MBList<T>::MBList() {
     _length = 0;
     _capacity = INITIAL_CAPACITY;
     _data = (T *) malloc(sizeof(T) * _capacity);
 }
 
 template<typename T>
-ArrayList<T>::~ArrayList() {
+MBList<T>::~MBList() {
     free(_data);
 }
 
 template<typename T> size_t
-ArrayList<T>::length() {
+MBList<T>::length() {
     return _length;
 }
 
 template<typename T> int32_t
-ArrayList<T>::append(T value) {
+MBList<T>::append(T value) {
     return push(value);
 }
 
 template<typename T> T
-ArrayList<T>::add(T value) {
+MBList<T>::add(T value) {
     if (_length == _capacity) {
         _capacity = _capacity * 2;
         _data = (T *) realloc(_data, _capacity * sizeof(T));
@@ -67,7 +58,7 @@ ArrayList<T>::add(T value) {
 }
 
 template<typename T> int32_t
-ArrayList<T>::push(T value) {
+MBList<T>::push(T value) {
     if (_length == _capacity) {
         _capacity = _capacity * 2;
         _data = (T *) realloc(_data, _capacity * sizeof(T));
@@ -77,7 +68,7 @@ ArrayList<T>::push(T value) {
 }
 
 template<typename T> T
-ArrayList<T>::pop() {
+MBList<T>::pop() {
     T value = _data[-- _length];
     return value;
 }
@@ -87,7 +78,7 @@ ArrayList<T>::pop() {
  * Returns the true if the replacement succeeded, or false otherwise.
  */
 template<typename T> bool
-ArrayList<T>::replace(T oldValue, T newValue) {
+MBList<T>::replace(T oldValue, T newValue) {
     int index = indexOf(oldValue);
     if (index < 0) {
         return false;
@@ -97,17 +88,17 @@ ArrayList<T>::replace(T oldValue, T newValue) {
 }
 
 template<typename T> bool
-ArrayList<T>::contains(T value) {
+MBList<T>::contains(T value) {
     return indexOf(value) >= 0;
 }
 
 template<typename T> void
-ArrayList<T>::clear() {
+MBList<T>::clear() {
     _length = 0;
 }
 
 template<typename T> int32_t
-ArrayList<T>::indexOf(T value) {
+MBList<T>::indexOf(T value) {
     for (size_t i = 0; i < _length; i++) {
         if (_data[i] == value) {
             return i;
@@ -117,13 +108,13 @@ ArrayList<T>::indexOf(T value) {
 }
 
 template<typename T> T &
-ArrayList<T>::operator[](size_t index) {
+MBList<T>::operator[](size_t index) {
     return _data[index];
 }
 
 template<typename T> bool
-ArrayList<T>::isEmpty() {
+MBList<T>::isEmpty() {
     return _length == 0;
 }
 
-#endif /* ArrayList_H */
+#endif /* MBList_h */

@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <mach/mach_types.h>
 
-#include "ArrayList.h"
+#include "MBList.h"
 
 class MDBDebugger;
 class MDBBreakpoint;
@@ -28,9 +28,9 @@ class MDBCodeRegion;
     if (kr != KERN_SUCCESS) {\
         char *machErrorMessage = mach_error_string(kr); \
         if (machErrorMessage != NULL && strlen(machErrorMessage) != 0) { \
-            log("%s:%d: %s: %s", __FILE__, __LINE__, msg, machErrorMessage); \
+            log.traceLn("%s:%d: %s: %s", __FILE__, __LINE__, msg, machErrorMessage); \
         } else { \
-            log("%s:%d: %s: [errno: %d]", __FILE__, __LINE__, msg, kr); \
+            log.traceLn("%s:%d: %s: [errno: %d]", __FILE__, __LINE__, msg, kr); \
         } \
     } \
 } while (0)
@@ -63,10 +63,12 @@ class MDBCodeRegion;
 } while (0)
 
 int acquireTaskportRight();
-void log(const char* format, ...);
+void log2(const char* format, ...);
 void error(const char* format, ...);
 char *appendString(char *buffer, const char *format, ...);
 char *allocateFormattedString(const char *format, ...);
 void deallocateString(char *address);
+
+#define LOG_CALL log("> CALL %s %s %d", __FUNCTION__, __FILE__, __LINE__)
 
 #endif

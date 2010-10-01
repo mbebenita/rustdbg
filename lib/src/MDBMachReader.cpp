@@ -1,5 +1,6 @@
 #include "MDBShared.h"
 #include "MDBMachReader.h"
+#include "MDBLog.h"
 
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
@@ -9,7 +10,7 @@
 
 bool
 MDBMachReader::read(const char* fileName) {
-    log("loading symbols from %s", fileName);
+    log.traceLn("loading symbols from %s", fileName);
     FILE *file = fopen(fileName, "rb");
     RETURN_VALUE_ON_ERROR(file, "Cannot open file for reading.", false);
     fseek(file, 0, SEEK_END);
@@ -36,7 +37,7 @@ MDBMachReader::read(const char* fileName) {
     curr += sizeof(mach_header);
     for (uint32_t i = 0; i < header->ncmds; i++) {
         struct load_command *loadCommand = (struct load_command *)curr;
-        log("loading command 0x%X, %d of %d", loadCommand->cmd, i + 1, header->ncmds);
+        log.traceLn("loading command 0x%X, %d of %d", loadCommand->cmd, i + 1, header->ncmds);
         if (loadCommand->cmd == LC_SYMTAB) {
             symtabCommand = (struct symtab_command *)loadCommand;
         } else if(loadCommand->cmd == LC_SEGMENT) {
@@ -58,13 +59,13 @@ MDBMachReader::read(const char* fileName) {
     
     for (uint32_t i = 0; i < symtabCommand->nsyms; i++) {
         struct nlist &symbol = symbols[i];
-        log("symbol name %s", stringTable + symbol.n_un.n_strx);
+        log.traceLn("symbol name %s", stringTable + symbol.n_un.n_strx);
         if ((symbol.n_type & N_TYPE) == N_SECT) {
             if (symbol.n_sect == 1) {
                 // TODO: We only support code symbols for now.
                 this->symbols.append(new MDBMachSymbol(stringTable + symbol.n_un.n_strx, symbol.n_value));
             }
-            log("symbol defined in section %d at 0x%X.", symbol.n_sect, symbol.n_value);
+            log.traceLn("symbol defined in section %d at 0x%X.", symbol.n_sect, symbol.n_value);
         }
     }
     return true;

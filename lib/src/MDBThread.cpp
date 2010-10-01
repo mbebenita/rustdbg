@@ -35,7 +35,7 @@ MDBThread::updateState() {
 
 void
 MDBThread::onStateUpdated() {
-    stack.updateState();
+    // stack.updateState();
 }
 
 bool
@@ -57,6 +57,7 @@ MDBThread::runStateName() {
 
 void
 MDBThread::logState() {
-    log("thread: %d, sc: %d sp: 0x%X, fp: 0x%X, pc: 0x%X",
-        thread, info.suspend_count, state.__esp, state.__ebp, state.__eip);
+    log.traceLn("thread: %d, sc: %d sp: 0x%X, fp: 0x%X, pc: 0x%X, step: %s",
+        thread, info.suspend_count, state.__esp, state.__ebp, state.__eip,
+        state.__eflags & 0x100UL ? "yes" : "no");
 }

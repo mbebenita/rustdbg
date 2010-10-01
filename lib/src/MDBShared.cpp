@@ -3,7 +3,7 @@
 #include <Security/Security.h>
 #include <Security/Authorization.h>
 
-void log(const char* format, ...) {
+void log2(const char* format, ...) {
     va_list ap;
     va_start(ap, format);
     vfprintf(stdout, format, ap);
@@ -44,8 +44,6 @@ void
 deallocateString(char *address) {
     if (address) {
         free(address);
-    } else {
-        log("freeing null pointer");
     }
 }
 
@@ -91,7 +89,6 @@ int acquireTaskportRight() {
     if (status == errAuthorizationSuccess) {
         return 0;
     } else if (status == errAuthorizationInteractionNotAllowed) {
-    	log ("HERE");
     	return 0;
     }
     return 1;

@@ -35,7 +35,7 @@ MDBCodeRegion::fromProcedure(MDBDebugger *debugger, uintptr_t address) {
     char buffer[bufferSize]; 
     
     if (debugger->read(buffer, address, sizeof(buffer)) != (int) sizeof(buffer)) {
-        log("Cannot read procedure memory.");
+        log.traceLn("Cannot read procedure memory.");
     }
     
     ud_t ud_obj;
@@ -49,7 +49,7 @@ MDBCodeRegion::fromProcedure(MDBDebugger *debugger, uintptr_t address) {
         int pc = ud_obj.pc;
         size_t instructionSize = ud_disassemble(&ud_obj);
         remaining -= instructionSize;
-        log("decoded: 0x%llx %s", pc, ud_insn_asm(&ud_obj));
+        log.traceLn("decoded: 0x%llx %s", pc, ud_insn_asm(&ud_obj));
     } while (remaining > 0);
     return NULL;
 }
@@ -92,7 +92,7 @@ MDBCodeRegionManager::loadSymbols(const char *fileName) {
     machFiles.add(machFile);
     for (uint32_t i = 0; i < machFile->symbols.length(); i++) {
         MDBMachSymbol *symbol = machFile->symbols[i];
-        log("scanning symbol %s", symbol->name);
+        log.traceLn("scanning symbol %s", symbol->name);
         scanProcedure(symbol->address);
     }
     return true;
@@ -117,7 +117,7 @@ size_t
 MDBCodeRegionManager::getInstructionLength(uintptr_t address) {
     char buffer[32];
     if (debugger->read(buffer, address, sizeof(buffer)) != sizeof(buffer)) {
-        log("Cannot read instruction memory.");
+        log.traceLn("Cannot read instruction memory.");
     }
     ud_t insn;
     ud_init(&insn); 
@@ -125,7 +125,7 @@ MDBCodeRegionManager::getInstructionLength(uintptr_t address) {
     ud_set_mode(&insn, 32);
     ud_set_syntax(&insn, UD_SYN_INTEL);
     size_t length = ud_disassemble(&insn);
-    log("Instruction at 0x%X is %d bytes long.", address, length);
+    log.traceLn("Instruction at 0x%X is %d bytes long.", address, length);
     return length;
 }
 
@@ -133,7 +133,7 @@ bool
 MDBCodeRegionManager::isCallInstruction(uintptr_t address) {
     char buffer[32];
     if (debugger->read(buffer, address, sizeof(buffer)) != sizeof(buffer)) {
-        log("Cannot read instruction memory.");
+        log.traceLn("Cannot read instruction memory.");
     }
     ud_t insn;
     ud_init(&insn); 
@@ -141,7 +141,7 @@ MDBCodeRegionManager::isCallInstruction(uintptr_t address) {
     ud_set_mode(&insn, 32);
     ud_set_syntax(&insn, UD_SYN_INTEL);
     size_t length = ud_disassemble(&insn);
-    log("Instruction at 0x%X is %d bytes long.", address, length);
+    log.traceLn("Instruction at 0x%X is %d bytes long.", address, length);
     return insn.mnemonic == UD_Icall;
 }
 
@@ -152,21 +152,21 @@ MDBCodeRegionManager::isCallInstruction(uintptr_t address) {
 bool
 MDBCodeRegionManager::scanProcedure(uintptr_t address) {
     if (getRegion(address)) {
-        log("a regoin already exists");
+        log.traceLn("a region already exists");
         // A region already exists for this address.
         return true;
     }
 
-    log("scanning address %llx", address);
+    log.traceLn("scanning address %llx", address);
     
     size_t bufferSize = 1024 * 8;
     char buffer[bufferSize];
     
     if (debugger->read(buffer, address, sizeof(buffer)) != (int) sizeof(buffer)) {
-        log("Cannot read procedure memory.");
+        log.traceLn("Cannot read procedure memory.");
     }
     
-    ArrayList<uintptr_t> callTargets;
+    MBList<uintptr_t> callTargets;
     
     ud_t insn;
     ud_init(&insn); 
@@ -183,7 +183,7 @@ MDBCodeRegionManager::scanProcedure(uintptr_t address) {
             error("cannot disassemble");
             break;
         }
-        log("decoded: 0x%-8llx 0x%-8llx %s", 
+        log.traceLn("decoded: 0x%-8llx 0x%-8llx %s",
             address + offset,
             offset,
             ud_insn_asm(&insn));
@@ -197,7 +197,7 @@ MDBCodeRegionManager::scanProcedure(uintptr_t address) {
                 }
                 if (target) {
                     if (callTargets.contains(target) == false) {
-                        log("discovered new call target 0x%llx", target);
+                        log.traceLn("discovered new call target 0x%llx", target);
                         callTargets.append(target);
                     }
                 }

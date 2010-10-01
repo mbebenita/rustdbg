@@ -10,7 +10,7 @@
 #include <stdarg.h>
 
 static uint32_t readTypeBitMask() {
-    uint32_t bits = MDBLog::ULOG | MDBLog::ERR;
+    uint32_t bits = MDBLog::CALL | MDBLog::ERR;
     char *env_str = getenv("MDB_LOG");
     if (env_str) {
         bits = 0;

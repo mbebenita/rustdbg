@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <mach/mach.h>
 
+#include "MDBLog.h"
 #include "MDBCode.h"
 
 typedef bool (*ThreadVisitor)(MDBDebugger* debugger, thread_t thread, void *arg);
@@ -43,17 +44,17 @@ private:
 
     
     void checkForBreakpointsAndStepBack();
-    void deleteBreakpoints(ArrayList<MDBBreakpoint *> &breakpoints);
+    void deleteBreakpoints(MBList<MDBBreakpoint *> &breakpoints);
 public:
     bool setSingleStep(thread_t thread, void *arg);
+    bool enableSingleStep(MDBThread *thread, bool enable);
     
     char *fileName;
 
     MDBCodeRegionManager code;
-    ArrayList<MDBThread *> threads;
-    ArrayList<MDBBreakpoint *> breakpoints;
-    ArrayList<MDBBreakpoint *> transientBreakpoints;
-
+    MBList<MDBThread *> threads;
+    MBList<MDBBreakpoint *> breakpoints;
+    MBList<MDBBreakpoint *> transientBreakpoints;
     
 	MDBDebugger();
 	~MDBDebugger();
@@ -65,14 +66,15 @@ public:
     bool updateThread(MDBThread *thread);
     bool commitThread(MDBThread *thread);
 
-    void logState();
+    void logState(const char *name);
     MDBThread *findThread(thread_t thread);
     bool suspendOrResumeNoncurrentThread(bool suspend, thread_t thread, thread_t current);
 
     bool resumeThread(MDBThread *thread, bool resumeTask);
+    bool suspendAllThreads();
     bool suspendThread(MDBThread *thread);
     
-    bool resumeAllThreads();
+    bool resumeAllThreadsAndTask();
     bool resumeTask();
     
     bool step(MDBThread *thread, bool resumeAll);

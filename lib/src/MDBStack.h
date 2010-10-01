@@ -21,7 +21,7 @@ class MDBStack {
 public:
     MDBThread *thread;
     MDBStackFrame *frame;
-    ArrayList<MDBStackFrame *> frames;
+    MBList<MDBStackFrame *> frames;
     MDBStack(MDBThread *thread);
     void updateState();
     bool isInteriorPointer(uintptr_t address);

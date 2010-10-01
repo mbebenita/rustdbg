@@ -48,7 +48,7 @@ MDBStack::updateState() {
         frameSize = frameSize > 256 ? 256 : frameSize;
         frameAddress = previousFrameAddress;
         if (frames.length() > 64) {
-            log("too much recursion");
+            log.traceLn("too much recursion");
             break;
         }
     }

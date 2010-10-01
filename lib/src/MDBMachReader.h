@@ -15,7 +15,7 @@ class MDBMachReader {
     char *buffer;
     size_t bufferSize;
 public:
-    ArrayList<MDBMachSymbol *> symbols;
+    MBList<MDBMachSymbol *> symbols;
     bool read(const char* fileName);
     ~MDBMachReader();
 };
