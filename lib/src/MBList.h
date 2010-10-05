@@ -1,6 +1,8 @@
 #ifndef MBList_H
 #define MBList_H
 
+#include "MBShared.h"
+
 /**
  * A simple, resizable array list.
  */
@@ -19,6 +21,7 @@ public:
     T pop();
     bool replace(T oldValue, T newValue);
     int32_t indexOf(T value);
+    int32_t indexOf(MBPredicate<T> &predicate);
     bool contains(T value);
     void clear();
     bool isEmpty();
@@ -101,6 +104,16 @@ template<typename T> int32_t
 MBList<T>::indexOf(T value) {
     for (size_t i = 0; i < _length; i++) {
         if (_data[i] == value) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+template<typename T> int32_t
+MBList<T>::indexOf(MBPredicate<T> &predicate) {
+    for (size_t i = 0; i < _length; i++) {
+        if (predicate(_data[i])) {
             return i;
         }
     }

@@ -4,6 +4,13 @@
 #include "MDBLog.h"
 
 void
+MDBBreakpoint::notify() {
+    if (callback) {
+        callback->execute(this);
+    }
+}
+
+void
 MDBBreakpoint::disable() {
     enable(false);
 }

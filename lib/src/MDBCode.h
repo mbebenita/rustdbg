@@ -9,11 +9,11 @@ class MDBInstruction {
 
 class MDBCodeRegion {
 public:
-    MDBCodeRegionManager *code;
+    MDBCode *code;
     uintptr_t address;
-    MDBMachSymbol *symbol;
+    MDBSymbol *symbol;
     size_t size;
-    MDBCodeRegion(MDBCodeRegionManager *code, uintptr_t address, MDBMachSymbol *symbol, size_t size);
+    MDBCodeRegion(MDBCode *code, uintptr_t address, MDBSymbol *symbol, size_t size);
     int disassemble(char *buffer, size_t bufferSize);
     static MDBCodeRegion *fromProcedure(MDBDebugger *debugger, uintptr_t address);
 
@@ -25,18 +25,19 @@ public:
     bool contains(uintptr_t address);
 };
 
-class MDBCodeRegionManager {
+class MDBCode {
 bool scanProcedure(uintptr_t address);
 public:
-    MBList<MDBMachReader *> machFiles;
+    MBList<MDBMachFile *> files;
     MBList<MDBCodeRegion *> regions;
     MDBDebugger *debugger;
-    MDBCodeRegionManager(MDBDebugger *debugger);
+    MDBCode(MDBDebugger *debugger);
     MDBCodeRegion *getRegion(uintptr_t address);
     bool loadSymbols(const char *fileName);
-    MDBMachSymbol *findSymbolByNameOrAddress(const char *symbolName, uintptr_t address);
+    MDBSymbol *findSymbolByNameOrAddress(const char *symbolName, uintptr_t address);
     size_t getInstructionLength(uintptr_t address);
     bool isCallInstruction(uintptr_t address);
+    void logState();
 };
 
 #endif

@@ -14,7 +14,7 @@
 class MDBDebugger;
 class MDBBreakpoint;
 class MDBThread;
-class MDBCodeRegionManager;
+class MDBCode;
 class MDBStack;
 class MDBCodeRegion;
 

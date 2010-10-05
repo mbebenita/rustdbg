@@ -3,7 +3,7 @@
 #include "MDBDebugger.h"
 #include "udis86.h"
 
-MDBCodeRegion::MDBCodeRegion(MDBCodeRegionManager *code, uintptr_t address, MDBMachSymbol *symbol, size_t size) :
+MDBCodeRegion::MDBCodeRegion(MDBCode *code, uintptr_t address, MDBSymbol *symbol, size_t size) :
     code(code), address(address), symbol(symbol), size(size) {
     
 };
@@ -68,13 +68,13 @@ MDBCodeRegion::getOffset(uintptr_t address) {
     return offset;
 }
 
-MDBCodeRegionManager::MDBCodeRegionManager(MDBDebugger *debugger) : 
+MDBCode::MDBCode(MDBDebugger *debugger) : 
     debugger(debugger) {
     // Nop.
 };
 
 MDBCodeRegion *
-MDBCodeRegionManager::getRegion(uintptr_t address) {
+MDBCode::getRegion(uintptr_t address) {
     for (uint32_t i = 0; i < regions.length(); i++) {
         if (regions[i]->contains(address)) {
             return regions[i];
@@ -83,27 +83,50 @@ MDBCodeRegionManager::getRegion(uintptr_t address) {
     return NULL;
 }
 
+class MDBMatchMachFileName : public MBPredicate<MDBMachFile *>{
+    const char *fileName;
+public:
+    MDBMatchMachFileName(const char *fileName) : fileName(fileName) {
+        // Nop.
+    }
+    bool operator() (MDBMachFile *value) const {
+        return strcmp(value->fileName, fileName) == 0;
+    }
+};
+
+class MDBMatchDylibFileName : public MBPredicate<MDBMachFile *> {
+    const char *fileName;
+public:
+    MDBMatchDylibFileName(const char *fileName) : fileName(fileName) {
+        // Nop.
+    }
+    bool operator() (MDBMachFile *value) const {
+        return strcmp(value->fileName, fileName) == 0;
+    }
+};
+
 bool
-MDBCodeRegionManager::loadSymbols(const char *fileName) {
-    MDBMachReader *machFile = new MDBMachReader();
-    if (machFile->read(fileName) == false) {
+MDBCode::loadSymbols(const char *fileName) {
+    MDBMachFile *file = new MDBMachFile(fileName);
+    if (file->parse() == false) {
         return false;
     }
-    machFiles.add(machFile);
-    for (uint32_t i = 0; i < machFile->symbols.length(); i++) {
-        MDBMachSymbol *symbol = machFile->symbols[i];
-        log.traceLn("scanning symbol %s", symbol->name);
-        scanProcedure(symbol->address);
+    files.add(file);
+    for (uint32_t i = 0; i < file->dylibs.length(); i++) {
+        MDBMatchMachFileName predicate(file->dylibs[i]->fileName);
+        if (files.indexOf(predicate) < 0) {
+            loadSymbols(file->dylibs[i]->fileName);
+        }
     }
     return true;
 }
 
-MDBMachSymbol *
-MDBCodeRegionManager::findSymbolByNameOrAddress(const char *symbolName, uintptr_t address) {
-    for (uint32_t i = 0; i < machFiles.length(); i++) {
-        MDBMachReader *machFile = machFiles[i];    
+MDBSymbol *
+MDBCode::findSymbolByNameOrAddress(const char *symbolName, uintptr_t address) {
+    for (uint32_t i = 0; i < files.length(); i++) {
+        MDBMachFile *machFile = files[i];    
         for (uint32_t j = 0; j < machFile->symbols.length(); j++) {
-            MDBMachSymbol *symbol = machFile->symbols[j];
+            MDBSymbol *symbol = machFile->symbols[j];
             if (strcmp(symbol->name, symbolName ? symbolName : "") == 0 ||
                 symbol->address == address) {
                 return symbol;
@@ -114,7 +137,7 @@ MDBCodeRegionManager::findSymbolByNameOrAddress(const char *symbolName, uintptr_
 }
 
 size_t
-MDBCodeRegionManager::getInstructionLength(uintptr_t address) {
+MDBCode::getInstructionLength(uintptr_t address) {
     char buffer[32];
     if (debugger->read(buffer, address, sizeof(buffer)) != sizeof(buffer)) {
         log.traceLn("Cannot read instruction memory.");
@@ -130,7 +153,7 @@ MDBCodeRegionManager::getInstructionLength(uintptr_t address) {
 }
 
 bool 
-MDBCodeRegionManager::isCallInstruction(uintptr_t address) {
+MDBCode::isCallInstruction(uintptr_t address) {
     char buffer[32];
     if (debugger->read(buffer, address, sizeof(buffer)) != sizeof(buffer)) {
         log.traceLn("Cannot read instruction memory.");
@@ -150,7 +173,7 @@ MDBCodeRegionManager::isCallInstruction(uintptr_t address) {
  * Recursively generate code regions by statically analyzing machine code.
  */
 bool
-MDBCodeRegionManager::scanProcedure(uintptr_t address) {
+MDBCode::scanProcedure(uintptr_t address) {
     if (getRegion(address)) {
         log.traceLn("a region already exists");
         // A region already exists for this address.
@@ -219,6 +242,19 @@ MDBCodeRegionManager::scanProcedure(uintptr_t address) {
     }
     
     return true;
+}
+
+void
+MDBCode::logState() {
+    for (uint32_t i = 0; i < files.length(); i++) {
+        log.traceLn(MDBLog::SYM, "================================================================================");
+        log.traceLn(MDBLog::SYM, "symbol fileName: %s, count: %d", files[i]->fileName, files[i]->symbols.length());
+        for (uint32_t j = 0; j < files[i]->symbols.length(); j++) {
+            MDBSymbol *symbol = files[i]->symbols[j];
+            log.traceLn(MDBLog::SYM, "symbol address: 0x%08X, name: %s", symbol->address, symbol->name);
+        }
+        // log.traceLn(MDBLog::SYM, "Loaded %s %d symbols.", debugger.code.files[i]->fileName, debugger.code.files[i]->symbols.length());
+    }
 }
 
 MDBInstruction::MDBInstruction() {

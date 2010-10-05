@@ -8,6 +8,7 @@
 
 #include "MDBLog.h"
 #include "MDBCode.h"
+#include "MDBProcess.h"
 
 typedef bool (*ThreadVisitor)(MDBDebugger* debugger, thread_t thread, void *arg);
 
@@ -33,28 +34,28 @@ enum MDBProcessRunState {
 };
 
 enum MDBSignal {
-    NONE = 0,
-    TRAP = SIGTRAP
+    SIG_NONE = 0,
+    SIG_TRAP = SIGTRAP
 };
 
 class MDBDebugger {
 private:
     mach_port_t task;
     bool forallThreads(ThreadVisitor visitor, void *arg);
-
-    
     void checkForBreakpointsAndStepBack();
     void deleteBreakpoints(MBList<MDBBreakpoint *> &breakpoints);
+
+
 public:
     bool setSingleStep(thread_t thread, void *arg);
     bool enableSingleStep(MDBThread *thread, bool enable);
     
     char *fileName;
-
-    MDBCodeRegionManager code;
+    MDBCode code;
     MBList<MDBThread *> threads;
     MBList<MDBBreakpoint *> breakpoints;
     MBList<MDBBreakpoint *> transientBreakpoints;
+    MDBProcess *process;
     
 	MDBDebugger();
 	~MDBDebugger();
@@ -82,7 +83,7 @@ public:
     
     MDBProcessRunState wait(MDBSignal signal);
     
-    MDBBreakpoint *createBreakpoint(uint64_t address, bool transient = false);
+    MDBBreakpoint *createBreakpoint(uint64_t address, bool transient = false, MBCallback<void, MDBBreakpoint*> *callback = NULL);
     MDBBreakpoint *findBreakpoint(uint64_t address);
     
     int read(void *dst, vm_address_t src, size_t size, 

@@ -10,7 +10,7 @@
 #include <stdarg.h>
 
 static uint32_t readTypeBitMask() {
-    uint32_t bits = MDBLog::CALL | MDBLog::ERR;
+    uint32_t bits = MDBLog::CALL | MDBLog::ERR | MDBLog::SYM;
     char *env_str = getenv("MDB_LOG");
     if (env_str) {
         bits = 0;
@@ -49,13 +49,23 @@ MDBLog::~MDBLog() {
 
 }
 
+MDBLog::AnsiColor MDBLog::getColorForType(uint32_t typeBits) {
+    MDBLog::AnsiColor color = WHITE;
+    if (typeBits & MDBLog::SYM)
+        color = MDBLog::YELLOW;
+    if (typeBits & MDBLog::ERR)
+        color = MDBLog::RED;
+    return color;
+}
+
 void MDBLog::traceLn(uint32_t typeBits, const char *format, ...) {
     if (isTracing(typeBits)) {
-        va_list ap;
-        va_start(ap, format);
-        vfprintf(stdout, format, ap);
-        fprintf(stdout, "\n");
-        va_end(ap);
+        char buffer[1024] = "";
+        va_list args;
+        va_start(args, format);
+        vsprintf(buffer, format, args);
+        va_end(args);
+        traceLn(getColorForType(typeBits), typeBits, buffer);
     }
 }
 
@@ -72,9 +82,9 @@ void MDBLog::traceLn(AnsiColor color, uint32_t typeBits, char *message) {
         if (true) {
             char buffer[512] = "";
             appendString(buffer, color, "%s", message);
-            traceLn(typeBits, buffer);
+            traceLn(buffer);
         } else {
-            traceLn(typeBits, message);
+            traceLn(message);
         }
     }
 }

@@ -39,7 +39,7 @@ endif
 
 all: $(CFG_LIB) check
 	
-$(CFG_LIB): $(SOURCE_OBJ)
+$(CFG_LIB): $(SOURCE_OBJ) $(SOURCE_HDR)
 	g++ -shared $(CFG_GCC_LINK_FLAGS) -ldl -o $(CFG_LIB) $(SOURCE_OBJ)
 	
 %.o: %.cpp

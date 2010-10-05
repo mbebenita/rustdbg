@@ -9,7 +9,7 @@
 
 #define ERROR -1;
 
-MDBDebugger::MDBDebugger() : code(this) {
+MDBDebugger::MDBDebugger() : code(this), process(NULL) {
 
 }
 
@@ -237,7 +237,7 @@ int
 MDBDebugger::read(void *dst, vm_address_t src, size_t size, bool ignoreBreakpoints) {
     mach_vm_size_t bytesRead;
     kern_return_t kr = mach_vm_read_overwrite(task, src, size, (vm_address_t) dst, &bytesRead);
-    // Patch read buffer with breakpoint patches.
+    // Patch parse buffer with breakpoint patches.
     for (uint32_t i = 0; i < breakpoints.length(); i++) {
         MDBBreakpoint *breakpoint = breakpoints[i];
         if (breakpoint->enabled) {
@@ -265,8 +265,8 @@ MDBDebugger::write(vm_address_t dst, void *src, size_t size) {
 }
 
 MDBBreakpoint *
-MDBDebugger::createBreakpoint(uint64_t address, bool transient) {
-    MDBBreakpoint *breakpoint = new MDBBreakpoint(this, address);
+MDBDebugger::createBreakpoint(uint64_t address, bool transient, MBCallback<void, MDBBreakpoint*> *callback) {
+    MDBBreakpoint *breakpoint = new MDBBreakpoint(this, address, callback);
     if (transient) {
         transientBreakpoints.add(breakpoint);
     } else {
@@ -310,16 +310,40 @@ MDBDebugger::checkForBreakpointsAndStepBack() {
     for (uint32_t i = 0; i < threads.length(); i++) {
         MDBThread *thread = threads[i];
         MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip - 1);
-        if (breakpoint) {
-            if (breakpoint->enabled) {
+
+        // Check if we've stopped at a breakpoint.
+        if (breakpoint == false) {
+            continue;
+        }
+
+        if (breakpoint->enabled) {
+            thread->stepBack();
+            if (breakpointWorklist.contains(breakpoint) == false) {
                 breakpointWorklist.add(breakpoint);
-                breakpoint->disable();
-            }
-            if (breakpointWorklist.contains(breakpoint)) {
-                thread->stepBack();
             }
         }
     }
+
+    for (uint32_t i = 0; i < breakpointWorklist.length(); i++) {
+        breakpointWorklist[i]->disable();
+    }
+
+//    MBList<MDBBreakpoint *> breakpointWorklist;
+//    for (uint32_t i = 0; i < threads.length(); i++) {
+//        MDBThread *thread = threads[i];
+//        MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip - 1);
+//        if (breakpoint == false) {
+//            continue;
+//        }
+//        if (breakpoint->enabled) {
+//            breakpoint->notify();
+//            breakpointWorklist.add(breakpoint);
+//            breakpoint->disable();
+//        }
+//        if (breakpointWorklist.contains(breakpoint)) {
+//            thread->stepBack();
+//        }
+//    }
 }
 
 MDBProcessRunState
@@ -355,7 +379,7 @@ MDBDebugger::wait(MDBSignal waitSignal) {
             // check whether the process received a signal, and continue with it if so.
             int signal = WSTOPSIG(status);
             log.traceLn(MDBLog::DEBUG, "process: %d stopped due to signal number: %d (%s)", debuggeePid, signal, strsignal(signal));
-            if (waitSignal == signal && waitSignal == TRAP) {
+            if (waitSignal == signal && waitSignal == SIG_TRAP) {
                 for (uint32_t i = 0; i < threads.length(); i++) {
                     enableSingleStep(threads[i], false);
                 }
@@ -399,7 +423,7 @@ MDBDebugger::step(MDBThread *thread, bool resumeAll) {
         resumeThread(thread, false);
         resumeTask();
     }
-    MDBProcessRunState state = wait(TRAP);
+    MDBProcessRunState state = wait(SIG_TRAP);
     if (state == PRS_STOPPED) {
         if (reEnableBreakpoint) {
             breakpoint->enable(true);
@@ -429,7 +453,7 @@ MDBDebugger::stepOver(MDBThread *thread, bool resumeAll) {
         createBreakpoint(thread->state.__eip + instructionLength, true);
     transientBreakpoint->enable(true);
     resumeAllThreadsAndTask();
-    MDBProcessRunState state = wait(TRAP);
+    MDBProcessRunState state = wait(SIG_TRAP);
     if (state == PRS_STOPPED) {
         if (reEnableBreakpoint) {
             breakpoint->enable(true);
@@ -520,6 +544,7 @@ MDBDebugger::createProcess(char** commandLineArguments) {
             gatherThreads();
             logState("stopped");
             log.traceLn("target process created");
+            process = new MDBProcess(this, task);
             return true;
         } else if (WIFEXITED(status)) {
             error("Process terminated normally.");
