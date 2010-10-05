@@ -28,9 +28,14 @@ MDBDebuggerTest0::run() {
 		return false;
 	}
 
+	debugger.process->logExecutionState("STARTED");
+
 	debugger.process->initializeDylinkerHooks();
-	debugger.resumeAllThreadsAndTask();
-	debugger.wait(SIG_TRAP);
+	debugger.process->logExecutionState("about to resume");
+	while (debugger.resume()) {
+	    debugger.process->logExecutionState("STOPPED");
+	    debugger.logState("HERE");
+	};
 
 //	MBDelegate<void, int> a;
 

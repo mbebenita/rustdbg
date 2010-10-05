@@ -24,6 +24,13 @@ class MDBCodeRegion;
 
 #define ENTRY_POINT_SYMBOL_NAME "__ENTRY_POINT"
 
+#define THREAD_STATE_REGISTER_COUNT x86_THREAD_STATE32_COUNT
+#define THREAD_STATE_COUNT x86_THREAD_STATE32_COUNT
+#define THREAD_STATE_FLAVOR x86_THREAD_STATE32
+typedef x86_thread_state32_t MDBThreadState;
+typedef thread_basic_info MDBThreadInfo;
+
+
 #define REPORT_MACH_ERROR(msg, kr) do { \
     if (kr != KERN_SUCCESS) {\
         char *machErrorMessage = mach_error_string(kr); \

@@ -2,25 +2,19 @@
 #define MDBTHREAD_H
 
 #include "MDBStack.h"
-#include "MDBDebugger.h"
 
 class MDBThread {
 public:
-    MDBDebugger *debugger;
+    MDBProcess *process;
     thread_t thread;
     MDBStack stack;
     MDBThreadInfo info;
     MDBThreadState state;
-    MDBThread(MDBDebugger *debugger, thread_t thread);
-    bool step();
-    bool stepOver();
-    bool resume();
-    bool updateState();
+    MDBThread(MDBProcess *process, thread_t thread);
     void onStateUpdated();
-    bool stepBack();
-    bool commitState();
     void logState();
     const char* runStateName();
+    void updateInstructionPointerAndCommitState(int32_t offset);
 };
 
 #endif

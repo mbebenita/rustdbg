@@ -1,46 +1,16 @@
 #include "MDBShared.h"
+#include "MDBProcess.h"
 #include "MDBThread.h"
+#include "MDBLog.h"
 
-MDBThread::MDBThread(MDBDebugger *debugger, thread_t thread) 
-    : debugger(debugger), thread(thread), stack(this) {
+MDBThread::MDBThread(MDBProcess *process, thread_t thread)
+    : process(process), thread(thread), stack(this) {
     // Nop.
-}
-
-bool
-MDBThread::resume() {
-    return debugger->resumeThread(this, false);
-}
-
-bool
-MDBThread::step() {
-    return debugger->step(this, true);
-}
-
-bool
-MDBThread::stepOver() {
-    return debugger->stepOver(this, true);
-}
-
-bool
-MDBThread::stepBack() {
-    state.__eip -= 1;
-    commitState();
-    return true;
-}
-
-bool
-MDBThread::updateState() {
-    return debugger->updateThread(this);
 }
 
 void
 MDBThread::onStateUpdated() {
-    // stack.updateState();
-}
-
-bool
-MDBThread::commitState() {
-    return debugger->commitThread(this);
+    // Nop.
 }
 
 const char* 
@@ -60,4 +30,10 @@ MDBThread::logState() {
     log.traceLn("thread: %d, sc: %d sp: 0x%X, fp: 0x%X, pc: 0x%X, step: %s",
         thread, info.suspend_count, state.__esp, state.__ebp, state.__eip,
         state.__eflags & 0x100UL ? "yes" : "no");
+}
+
+void
+MDBThread::updateInstructionPointerAndCommitState(int32_t offset) {
+    state.__eip += offset;
+    process->machCommitThread(this);
 }

@@ -10,7 +10,7 @@
 #include <stdarg.h>
 
 static uint32_t readTypeBitMask() {
-    uint32_t bits = MDBLog::CALL | MDBLog::ERR | MDBLog::SYM;
+    uint32_t bits = MDBLog::CALL | MDBLog::ERR | MDBLog::SYM | MDBLog::INFO | MDBLog::ALL;
     char *env_str = getenv("MDB_LOG");
     if (env_str) {
         bits = 0;
@@ -55,6 +55,8 @@ MDBLog::AnsiColor MDBLog::getColorForType(uint32_t typeBits) {
         color = MDBLog::YELLOW;
     if (typeBits & MDBLog::ERR)
         color = MDBLog::RED;
+    if (typeBits & MDBLog::INFO)
+        color = MDBLog::GREEN;
     return color;
 }
 
@@ -75,6 +77,31 @@ void MDBLog::traceLn(const char *format, ...) {
     vfprintf(stdout, format, ap);
     fprintf(stdout, "\n");
     va_end(ap);
+}
+
+void MDBLog::traceDividerLn() {
+    traceDividerLn(NULL);
+}
+
+void MDBLog::traceDividerLn(const char *format, ...) {
+    char lineBuffer[1024] = "";
+    if (format != NULL) {
+        char buffer[1024] = "";
+        va_list args;
+        va_start(args, format);
+        vsprintf(buffer, format, args);
+        va_end(args);
+        appendString(lineBuffer, "=== ");
+        appendString(lineBuffer, buffer);
+        appendString(lineBuffer, " ===");
+    }
+    size_t length = strlen(lineBuffer);
+    size_t width = 128;
+    for (uint32_t i = length; i < width; i++) {
+        lineBuffer[i] = '=';
+    }
+    lineBuffer[width] = '\0';
+    traceLn(lineBuffer);
 }
 
 void MDBLog::traceLn(AnsiColor color, uint32_t typeBits, char *message) {

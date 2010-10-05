@@ -40,13 +40,6 @@ allocateFormattedString(const char *format, ...) {
     return buffer;
 }
 
-void 
-deallocateString(char *address) {
-    if (address) {
-        free(address);
-    }
-}
-
 /**
  * Acquiring debug privileges on Snow Leopard is a bit of a pain.
  *

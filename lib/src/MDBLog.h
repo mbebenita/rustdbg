@@ -27,6 +27,8 @@ public:
         DEBUG = 0x2,
         CALL = 0x4,
         SYM = 0x8,
+        INFO = 0x10,
+        THREAD = 0x20,
         ALL = 0xffffffff
     };
 
@@ -39,6 +41,8 @@ public:
     void traceLn(AnsiColor color, uint32_t typeBits, char *message);
     void traceLn(uint32_t typeBits, const char *format, ...);
     void traceLn(const char *format, ...);
+    void traceDividerLn();
+    void traceDividerLn(const char *format, ...);
     bool isTracing(uint32_t typeBits);
 };
 

@@ -46,19 +46,34 @@ struct MDBDyldRawInfo {
 class MDBProcess {
 private:
     mach_vm_address_t findAddress(uint32_t fileType, const char *imageName);
-    MDBBreakpoint *onLoadedLibraryBreakpoint;
-    void onLoadedLibrary(MDBBreakpoint *breakpoint);
+    MDBBreakpoint *onLibraryLoadedBreakpoint;
+    void onLibraryLoaded(MDBBreakpoint *breakpoint);
 public:
     bool initializeDylinkerHooks();
     MDBDebugger *debugger;
     mach_port_t task;
+    MBList<MDBThread *> threads;
     MDBProcess(MDBDebugger *debugger, mach_port_t task);
     virtual ~MDBProcess();
-    void logState();
+
+    void logMemoryState();
+    void logDylinkerState();
+    void logExecutionState(const char *name);
 
     bool read_overwrite(void *dst, vm_address_t src, vm_size_t size);
     bool read(mach_vm_address_t *dst, mach_vm_address_t src, mach_vm_size_t size);
     bool free(mach_vm_address_t src, mach_vm_size_t size);
+
+    MDBThread *findThread(thread_t thread);
+    bool gatherThreads();
+    bool machUpdateThread(MDBThread *thread);
+    bool machCommitThread(MDBThread *thread);
+
+    bool machResumeThreadsAndTask();
+    bool machResumeThread(MDBThread *thread);
+    bool machResumeTask();
+    bool machSuspendThread(MDBThread *thread);
+    bool machSuspendAllThreads();
 };
 
 #endif /* MDBPROCESS_H */

@@ -17,8 +17,9 @@ public:
         // Nop.
     }
     void enable(bool enable);
-    void notify();
+    void onBreakpointReached();
     void disable();
+    void logState();
 };
 
 #endif

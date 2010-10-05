@@ -4,7 +4,7 @@
 #include "MDBLog.h"
 
 void
-MDBBreakpoint::notify() {
+MDBBreakpoint::onBreakpointReached() {
     if (callback) {
         callback->execute(this);
     }
@@ -21,7 +21,7 @@ MDBBreakpoint::enable(bool enable) {
         char int_3 = 0xCC;
         this->enabled = debugger->read(&patch, address, 1) && debugger->write(address, &int_3, 1);
         if (this->enabled) {
-            log.traceLn("enable breakpoint at 0x%X, patch with 0x%X", address, patch);
+            log.traceLn("enabled breakpoint at 0x%X, patch back with 0x%X", address, patch);
         } else {
             error("cannot enable breakpoint");
         }
@@ -35,4 +35,8 @@ MDBBreakpoint::enable(bool enable) {
             error("cannot remove breakpoint");
         }
     }
+}
+
+void MDBBreakpoint::logState() {
+    log.traceLn("breakpoint address: 0x%llx, patch: %x, enabled: %s, temporarilyDisabled %s", address, patch, enabled ? "yes" : "no");
 }

@@ -12,11 +12,7 @@
 
 typedef bool (*ThreadVisitor)(MDBDebugger* debugger, thread_t thread, void *arg);
 
-#define THREAD_STATE_REGISTER_COUNT x86_THREAD_STATE32_COUNT
-#define THREAD_STATE_COUNT x86_THREAD_STATE32_COUNT
-#define THREAD_STATE_FLAVOR x86_THREAD_STATE32
-typedef x86_thread_state32_t MDBThreadState;
-typedef thread_basic_info MDBThreadInfo;
+
 
 enum MDBThreadRunState {
     TRS_RUNNING,
@@ -43,6 +39,7 @@ private:
     mach_port_t task;
     bool forallThreads(ThreadVisitor visitor, void *arg);
     void checkForBreakpointsAndStepBack();
+    void checkForBreakpointsAndStep();
     void deleteBreakpoints(MBList<MDBBreakpoint *> &breakpoints);
 
 
@@ -62,13 +59,8 @@ public:
     
 	bool createProcess(char** commandLineArguments);
 	bool killProcess();
-    bool gatherThreads();
-    
-    bool updateThread(MDBThread *thread);
-    bool commitThread(MDBThread *thread);
 
     void logState(const char *name);
-    MDBThread *findThread(thread_t thread);
     bool suspendOrResumeNoncurrentThread(bool suspend, thread_t thread, thread_t current);
 
     bool resumeThread(MDBThread *thread, bool resumeTask);
@@ -81,15 +73,17 @@ public:
     bool step(MDBThread *thread, bool resumeAll);
     bool stepOver(MDBThread *thread, bool resumeAll);
     
-    MDBProcessRunState wait(MDBSignal signal);
+    MDBProcessRunState internalWait(MDBSignal signal);
     
-    MDBBreakpoint *createBreakpoint(uint64_t address, bool transient = false, MBCallback<void, MDBBreakpoint*> *callback = NULL);
+    MDBBreakpoint *createBreakpoint(uint64_t address, MBCallback<void, MDBBreakpoint*> *callback = NULL);
     MDBBreakpoint *findBreakpoint(uint64_t address);
     
     int read(void *dst, vm_address_t src, size_t size, 
         bool ignoreBreakpoints = true);
     
     int write(vm_address_t dst, void *src, size_t size);
+
+    bool resume();
 };
 
 class MDBDisassembler {
