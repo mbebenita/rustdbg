@@ -317,7 +317,7 @@ MDBDebugger::internalWait(MDBSignal waitSignal) {
         }
         if (WIFEXITED(status)) {
             log.traceLn(MDBLog::DEBUG, "process: %d exited with exit code: %d", debuggeePid, WEXITSTATUS(status));
-            process->gatherThreads();
+            process->machSignalTerminated();
             return PRS_TERMINATED;
         }
         if (WIFSIGNALED(status)) {
@@ -485,7 +485,8 @@ MDBDebugger::createProcess(char** commandLineArguments) {
             kr = task_for_pid(mach_task_self(), childPid, &task);
 			RETURN_ON_MACH_ERROR("task_for_pid", kr, -1);
             log.traceLn(MDBLog::INFO, "Created inferior process name: %s, pid: %d.", fileName, childPid);
-            process = new MDBProcess(this, task);
+            process = new MDBProcess(this, task, childPid);
+            process->initializeDylinkerHooks();
             process->gatherThreads();
             return true;
         } else if (WIFEXITED(status)) {

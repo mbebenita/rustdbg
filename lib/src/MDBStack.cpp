@@ -1,4 +1,6 @@
 #include "MDBShared.h"
+#include "MDBDebugger.h"
+#include "MDBProcess.h"
 #include "MDBStack.h"
 #include "MDBThread.h"
 
@@ -14,7 +16,7 @@ MDBStackFrame::MDBStackFrame (MDBStack *stack,
 uint32_t 
 MDBStackFrame::readU32(int32_t offset) {
     uint32_t value;
-    stack->thread->debugger->read(&value, address + offset, sizeof(uint32_t));
+    stack->thread->process->debugger->read(&value, address + offset, sizeof(uint32_t));
     return value;
 }
 
@@ -34,16 +36,16 @@ MDBStack::updateState() {
     while (frameAddress) {
         uint32_t previousFrameAddress = 0;
         uint32_t previousFrameAddressOffset = 0;
-        thread->debugger->read(&previousFrameAddress, frameAddress + previousFrameAddressOffset, sizeof(uint32_t));
+        thread->process->debugger->read(&previousFrameAddress, frameAddress + previousFrameAddressOffset, sizeof(uint32_t));
         if (isInteriorPointer(previousFrameAddress) == false) {
             previousFrameAddressOffset = 12;
-            thread->debugger->read(&previousFrameAddress, frameAddress + previousFrameAddressOffset, sizeof(uint32_t));
+            thread->process->debugger->read(&previousFrameAddress, frameAddress + previousFrameAddressOffset, sizeof(uint32_t));
         }
-        MDBCodeRegion *region = thread->debugger->code.getRegion(codeAddress);
+        MDBCodeRegion *region = thread->process->debugger->code.getRegion(codeAddress);
         frame = new MDBStackFrame(this, NULL, frameAddress, codeAddress, region, frameSize);
         frames.push(frame);
         // log("frameAddress %x, previousFrameAddress %x, codeAddress %x", frameAddress, previousFrameAddress, codeAddress);
-        thread->debugger->read(&codeAddress, frameAddress + previousFrameAddressOffset + 4, sizeof(uint32_t));
+        thread->process->debugger->read(&codeAddress, frameAddress + previousFrameAddressOffset + 4, sizeof(uint32_t));
         frameSize = previousFrameAddress - frameAddress;
         frameSize = frameSize > 256 ? 256 : frameSize;
         frameAddress = previousFrameAddress;

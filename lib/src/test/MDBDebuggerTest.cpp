@@ -27,14 +27,13 @@ MDBDebuggerTest0::run() {
 	if (debugger.createProcess(commandLineArguments) == false) {
 		return false;
 	}
-
-	debugger.process->logExecutionState("STARTED");
-
 	debugger.process->initializeDylinkerHooks();
-	debugger.process->logExecutionState("about to resume");
+	debugger.code.loadSymbols("/Users/Michael/Rust/src/test/run-pass/argv.x86");
+	debugger.code.logState();
+	MDBSymbol *symbol = debugger.code.findSymbolByNameOrAddress("__ENTRY_POINT", 0);
+	debugger.createBreakpoint(symbol->address, NULL)->enable(true);
 	while (debugger.resume()) {
 	    debugger.process->logExecutionState("STOPPED");
-	    debugger.logState("HERE");
 	};
 
 //	MBDelegate<void, int> a;

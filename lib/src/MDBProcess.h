@@ -49,16 +49,19 @@ private:
     MDBBreakpoint *onLibraryLoadedBreakpoint;
     void onLibraryLoaded(MDBBreakpoint *breakpoint);
 public:
+    bool running;
     bool initializeDylinkerHooks();
     MDBDebugger *debugger;
     mach_port_t task;
+    pid_t pid;
     MBList<MDBThread *> threads;
-    MDBProcess(MDBDebugger *debugger, mach_port_t task);
+    MDBProcess(MDBDebugger *debugger, mach_port_t task, pid_t pid);
     virtual ~MDBProcess();
 
     void logMemoryState();
     void logDylinkerState();
     void logExecutionState(const char *name);
+
 
     bool read_overwrite(void *dst, vm_address_t src, vm_size_t size);
     bool read(mach_vm_address_t *dst, mach_vm_address_t src, mach_vm_size_t size);
@@ -71,9 +74,12 @@ public:
 
     bool machResumeThreadsAndTask();
     bool machResumeThread(MDBThread *thread);
+    bool machUpdateTask();
     bool machResumeTask();
     bool machSuspendThread(MDBThread *thread);
     bool machSuspendAllThreads();
+
+    void machSignalTerminated();
 };
 
 #endif /* MDBPROCESS_H */

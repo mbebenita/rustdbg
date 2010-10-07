@@ -18,7 +18,8 @@
 #include <mach-o/stab.h>
 #include <mach-o/dyld_images.h>
 
-MDBProcess::MDBProcess(MDBDebugger *debugger, mach_port_t task) : debugger(debugger), task(task) {
+MDBProcess::MDBProcess(MDBDebugger *debugger, mach_port_t task, pid_t pid) :
+    running(true), debugger(debugger), task(task), pid(pid) {
     // Nop.
 }
 
@@ -131,9 +132,11 @@ MDBProcess::logMemoryState() {
     mach_msg_type_number_t count = VM_REGION_BASIC_INFO_COUNT_64;
     mach_port_t object = MACH_PORT_NULL;
 
-    do {
+    while (true) {
         kr = mach_vm_region(task, &address, &size, flavor, (vm_region_info_t) &info, &count, &object);
-        REPORT_MACH_ERROR("mach_vm_region", kr);
+        if (kr == KERN_INVALID_ADDRESS) {
+            break;
+        }
 
         log.traceLn(MDBLog::SYM, "%08X-%08X %8uK %c%c%c/%c%c%c %11s %6s %10s uwir=%hu sub=%u",
             (uint32_t) address, (uint32_t) (address + size), (uint32_t) (size >> 10),
@@ -152,7 +155,7 @@ MDBProcess::logMemoryState() {
         // Make sure the region is not read protected and that it's large enough
         // to hold a mach header.
 
-        if (!(info.protection & VM_PROT_READ) || size < sizeof (struct mach_header)) {
+        if (!(info.protection & VM_PROT_READ) || size < sizeof (struct mach_header) || info.inheritance == VM_INHERIT_SHARE) {
             address += size;
             continue;
         }
@@ -169,10 +172,9 @@ MDBProcess::logMemoryState() {
                 log.traceLn(MDBLog::SYM, "  imageName: %s", MDBMachFile::findImageName(image));
             }
         }
-
         free(image, size);
         address += size;
-    } while (kr != KERN_INVALID_ADDRESS);
+    };
 }
 
 mach_vm_address_t
@@ -340,6 +342,16 @@ MDBProcess::machResumeThread(MDBThread *thread) {
 }
 
 bool
+MDBProcess::machUpdateTask() {
+    struct task_basic_info info;
+    unsigned int info_count = TASK_BASIC_INFO_COUNT;
+    kern_return_t kr = task_info(task, TASK_BASIC_INFO, (task_info_t) &info, &info_count);
+    REPORT_MACH_ERROR("task_info", kr);
+    log.traceLn("COOL %d %llx", info.suspend_count, kr);
+    return false;
+}
+
+bool
 MDBProcess::machResumeTask() {
     while (true) {
         struct task_basic_info info;
@@ -378,4 +390,9 @@ MDBProcess::machSuspendAllThreads() {
         machSuspendThread(threads[i]);
     }
     return true;
+}
+
+void
+MDBProcess::machSignalTerminated() {
+    running = false;
 }

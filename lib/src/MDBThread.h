@@ -3,6 +3,8 @@
 
 #include "MDBStack.h"
 
+class MDBProcess;
+
 class MDBThread {
 public:
     MDBProcess *process;

@@ -1,6 +1,8 @@
 #ifndef MDBSHARED_H
 #define MDBSHARED_H
 
+#include <execinfo.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -33,6 +35,12 @@ typedef thread_basic_info MDBThreadInfo;
 
 #define REPORT_MACH_ERROR(msg, kr) do { \
     if (kr != KERN_SUCCESS) {\
+        void *frames[1024]; \
+        int frameCount = backtrace(frames, 1024); \
+        char **frameSymbols = backtrace_symbols(frames, frameCount); \
+        for (int i = 0; i < frameCount; i++) { \
+            log.traceLn("%s", frameSymbols[i]); \
+        } \
         char *machErrorMessage = mach_error_string(kr); \
         if (machErrorMessage != NULL && strlen(machErrorMessage) != 0) { \
             log.traceLn("%s:%d: %s: %s", __FILE__, __LINE__, msg, machErrorMessage); \
