@@ -46,7 +46,7 @@ $(CFG_LIB): $(SOURCE_OBJ) $(SOURCE_HDR)
 	g++ $(CFG_GCC_CFLAGS) -c -o $@ $<
 	
 %.x86: %.cpp $(CFG_LIB)
-	g++ $(CFG_GCC_CFLAGS) -L. -lrustdbg -o $@ $<
+	g++ $(CFG_GCC_CFLAGS) -L. -lrustdbg -lreadline -o $@ $<
 	codesign -s $(CFG_CERTIFICATE_NAME) $@
 
 check: $(TEST_OBJ)
