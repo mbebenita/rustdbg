@@ -352,31 +352,49 @@ MDBDebugger::internalWait(MDBSignal waitSignal) {
  */
 bool
 MDBDebugger::step(MDBThread *thread, bool resumeAll) {
-    log.traceLn(MDBLog::CALL, "step thread: %d, resumeAll: %d", thread->thread, resumeAll);
+//    log.traceLn(MDBLog::CALL, "step thread: %d, resumeAll: %d", thread->thread, resumeAll);
+//    MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip);
+//    bool reEnableBreakpoint = false;
+//    if (breakpoint && breakpoint->enabled) {
+//        breakpoint->disable();
+//        reEnableBreakpoint = true;
+//    }
+//    if (resumeAll == false) {
+//        suspendAllThreads();
+//    }
+//    enableSingleStep(thread, true);
+//    if (resumeAll) {
+//        resumeAllThreadsAndTask();
+//    } else {
+//        resumeThread(thread, false);
+//        resumeTask();
+//    }
+//    MDBProcessRunState state = internalWait(SIG_TRAP);
+//    if (state == PRS_STOPPED) {
+//        if (reEnableBreakpoint) {
+//            breakpoint->enable(true);
+//        }
+//        return true;
+//    }
+//    return false;
+
     MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip);
     bool reEnableBreakpoint = false;
     if (breakpoint && breakpoint->enabled) {
         breakpoint->disable();
         reEnableBreakpoint = true;
     }
-    if (resumeAll == false) {
-        suspendAllThreads();
-    }
     enableSingleStep(thread, true);
-    if (resumeAll) {
-        resumeAllThreadsAndTask();
-    } else {
-        resumeThread(thread, false);
-        resumeTask();
+    process->machSuspendAllThreads();
+    process->machResumeThread(thread);
+    process->machResumeTask();
+    if (internalWait(SIG_TRAP) == PRS_STOPPED) {
+        enableSingleStep(thread, false);
     }
-    MDBProcessRunState state = internalWait(SIG_TRAP);
-    if (state == PRS_STOPPED) {
-        if (reEnableBreakpoint) {
-            breakpoint->enable(true);
-        }
-        return true;
+    if (reEnableBreakpoint) {
+        breakpoint->enable(true);
     }
-    return false;
+    return true;
 }
 
 /**

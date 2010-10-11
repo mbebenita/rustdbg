@@ -19,6 +19,7 @@ public:
     int32_t append(T value);
     int32_t push(T value);
     T pop();
+    T get(size_t index);
     bool replace(T oldValue, T newValue);
     int32_t indexOf(T value);
     int32_t indexOf(MBPredicate<T> &predicate);
@@ -74,6 +75,11 @@ template<typename T> T
 MBList<T>::pop() {
     T value = _data[-- _length];
     return value;
+}
+
+template<typename T> T
+MBList<T>::get(size_t index) {
+    return _data[index];
 }
 
 /**

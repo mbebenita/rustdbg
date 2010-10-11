@@ -57,4 +57,17 @@ public:
     bool isRunning();
 };
 
+template<typename T> class MBList;
+
+class MBString {
+public:
+    static char *trimLeft(char *str);
+    static char *trimRight(char *str);
+    static char *clone(const char *str);
+    static MBList<char *> *split(char *str, const char *delimiters);
+
+    static bool startsWith(const char *str, const char *with);
+    static char *scanReverse(const char *str, char *ptr, const char chr);
+};
+
 #endif /* MBSHARED_H */
