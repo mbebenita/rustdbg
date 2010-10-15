@@ -1,6 +1,4 @@
 *~
 *.o
 *.x86
-*.cproject
-*.project
 *.dylib
