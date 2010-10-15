@@ -78,8 +78,7 @@ public:
     MDBBreakpoint *createBreakpoint(uint64_t address, MBCallback<void, MDBBreakpoint*> *callback = NULL);
     MDBBreakpoint *findBreakpoint(uint64_t address);
     
-    int read(void *dst, vm_address_t src, size_t size, 
-        bool ignoreBreakpoints = true);
+    int read(void *dst, vm_address_t src, size_t size, bool ignoreBreakpoints = true);
     
     int write(vm_address_t dst, void *src, size_t size);
 

@@ -30,6 +30,8 @@ public:
 
     void commandStep(char *line);
 
+    void commandPrintBackTrace(char *line);
+
     static char *
     readlineCommandGenerator (const char *text, int state);
 

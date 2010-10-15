@@ -33,6 +33,7 @@ MDBConsole::MDBConsole(MBList<char*> &arguments) : processFileName(NULL) {
     commands.add(MDBCommand("quit", "q", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandQuit), MDBConsole::readlineCommandGenerator));
     commands.add(MDBCommand("info", "i", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandInfo), MDBConsole::readlineCommandGenerator));
     commands.add(MDBCommand("info-symbols", "is", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandInfo), MDBConsole::readlineCommandGenerator));
+    commands.add(MDBCommand("print-back-trace", "is", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandPrintBackTrace), MDBConsole::readlineCommandGenerator));
     commands.add(MDBCommand("resume", "r", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandResume), MDBConsole::readlineCommandGenerator));
     commands.add(MDBCommand("step", "si", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandStep), MDBConsole::readlineCommandGenerator));
     commands.add(MDBCommand("break", "b", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandStep), MDBConsole::readlineSymbolGenerator));
@@ -61,6 +62,11 @@ MDBConsole::commandOpen(char *line) {
 void
 MDBConsole::commandInfo(char *line) {
     debugger.process->logExecutionState("INFO");
+}
+
+void
+MDBConsole::commandPrintBackTrace(char *line) {
+
 }
 
 void
