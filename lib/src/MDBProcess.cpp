@@ -19,8 +19,14 @@
 #include <mach-o/dyld_images.h>
 
 MDBProcess::MDBProcess(MDBDebugger *debugger, mach_port_t task, pid_t pid) :
-    running(true), debugger(debugger), task(task), pid(pid) {
+    running(true), debugger(debugger), task(task), pid(pid), is64Bit(machIs64Bit()) {
     // Nop.
+
+    kern_return_t kr = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &profiling_port);
+    REPORT_MACH_ERROR("mach_port_allocate", kr);
+
+    kr = mach_port_insert_right(mach_task_self(), profiling_port, profiling_port, MACH_MSG_TYPE_MAKE_SEND);
+    REPORT_MACH_ERROR("mach_port_insert_right", kr);
 }
 
 MDBProcess::~MDBProcess() {
@@ -226,6 +232,9 @@ MDBProcess::onLibraryLoaded(MDBBreakpoint *breakpoint) {
 
 bool
 MDBProcess::initializeDylinkerHooks() {
+    if (is64Bit) {
+        return false;
+    }
     mach_vm_address_t address = findAddress(MH_DYLINKER, NULL);
     if (address == false) {
         log.traceLn(MDBLog::SYM, "Dynamic linker was not loaded, cannot initialize dylinker hooks.");
@@ -280,8 +289,8 @@ MDBProcess::gatherThreads() {
 
 bool
 MDBProcess::machCommitThread(MDBThread *thread) {
-    mach_msg_type_number_t stateCount = THREAD_STATE_REGISTER_COUNT;
-    WRAP_MACH(thread_set_state(thread->thread, THREAD_STATE_FLAVOR, (natural_t *) &thread->state, stateCount), false);
+    mach_msg_type_number_t stateCount = THREAD_STATE32_REGISTER_COUNT;
+    WRAP_MACH(thread_set_state(thread->thread, THREAD_STATE32_FLAVOR, (natural_t *) &thread->state32, stateCount), false);
     return true;
 }
 
@@ -289,8 +298,13 @@ bool
 MDBProcess::machUpdateThread(MDBThread *thread) {
     unsigned int infoCount = THREAD_BASIC_INFO_COUNT;
     thread_info(thread->thread, THREAD_BASIC_INFO, (thread_info_t) &thread->info, &infoCount);
-    mach_msg_type_number_t stateCount = THREAD_STATE_REGISTER_COUNT;
-    WRAP_MACH(thread_get_state(thread->thread, THREAD_STATE_FLAVOR, (natural_t *) &thread->state, &stateCount), false);
+    if (is64Bit) {
+        mach_msg_type_number_t stateCount = THREAD_STATE64_REGISTER_COUNT;
+        WRAP_MACH(thread_get_state(thread->thread, THREAD_STATE64_FLAVOR, (natural_t *) &thread->state64, &stateCount), false);
+    } else {
+        mach_msg_type_number_t stateCount = THREAD_STATE32_REGISTER_COUNT;
+        WRAP_MACH(thread_get_state(thread->thread, THREAD_STATE32_FLAVOR, (natural_t *) &thread->state32, &stateCount), false);
+    }
     thread->onStateUpdated();
     return true;
 }
@@ -395,4 +409,15 @@ MDBProcess::machSuspendAllThreads() {
 void
 MDBProcess::machSignalTerminated() {
     running = false;
+}
+
+bool
+MDBProcess::machIs64Bit() {
+    return true;
+}
+
+void
+MDBProcess::machSample() {
+    kern_return_t kr = task_sample(task, MACH_PORT_NULL);
+    REPORT_MACH_ERROR("task_sample", kr);
 }

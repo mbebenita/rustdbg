@@ -122,6 +122,14 @@ MDBDebugger::resume() {
     checkForBreakpointsAndStepBack();
     return true;
 }
+
+bool
+MDBDebugger::profile() {
+    // task_sample(task, mach_port_mak)
+
+
+    return true;
+}
     
 bool
 MDBDebugger::resumeThread(MDBThread *thread, bool shouldResumeTask) {
@@ -263,7 +271,7 @@ void
 MDBDebugger::checkForBreakpointsAndStepBack() {
     for (uint32_t i = 0; i < process->threads.length(); i++) {
         MDBThread *thread = process->threads[i];
-        MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip - 1);
+        MDBBreakpoint *breakpoint = findBreakpoint(thread->state32.__eip - 1);
 
         // Check if we've stopped at a breakpoint.
         if (breakpoint == false) {
@@ -283,7 +291,7 @@ void
 MDBDebugger::checkForBreakpointsAndStep() {
     for (uint32_t i = 0; i < process->threads.length(); i++) {
         MDBThread *thread = process->threads[i];
-        MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip);
+        MDBBreakpoint *breakpoint = findBreakpoint(thread->state32.__eip);
         if (breakpoint && breakpoint->enabled) {
             breakpoint->disable();
             enableSingleStep(thread, true);
@@ -378,7 +386,7 @@ MDBDebugger::step(MDBThread *thread, bool resumeAll) {
 //    }
 //    return false;
 
-    MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip);
+    MDBBreakpoint *breakpoint = findBreakpoint(thread->state32.__eip);
     bool reEnableBreakpoint = false;
     if (breakpoint && breakpoint->enabled) {
         breakpoint->disable();
@@ -403,18 +411,18 @@ MDBDebugger::step(MDBThread *thread, bool resumeAll) {
  */
 bool
 MDBDebugger::stepOver(MDBThread *thread, bool resumeAll) {
-    if (code.isCallInstruction(thread->state.__eip) == false) {
+    if (code.isCallInstruction(thread->state32.__eip) == false) {
         return step(thread, resumeAll);
     }
-    MDBBreakpoint *breakpoint = findBreakpoint(thread->state.__eip);
+    MDBBreakpoint *breakpoint = findBreakpoint(thread->state32.__eip);
     bool reEnableBreakpoint = false;
     if (breakpoint && breakpoint->enabled) {
         breakpoint->disable();
         reEnableBreakpoint = true;
     }
-    size_t instructionLength = code.getInstructionLength(thread->state.__eip);
+    size_t instructionLength = code.getInstructionLength(thread->state32.__eip);
     MDBBreakpoint *transientBreakpoint =
-        createBreakpoint(thread->state.__eip + instructionLength);
+        createBreakpoint(thread->state32.__eip + instructionLength);
     transientBreakpoint->enable(true);
     resumeAllThreadsAndTask();
     MDBProcessRunState state = internalWait(SIG_TRAP);
@@ -439,15 +447,15 @@ MDBDebugger::killProcess() {
 bool
 MDBDebugger::setSingleStep(thread_t thread, void *arg) {
     const bool isEnabled = arg != NULL;
-    MDBThreadState state;
-    mach_msg_type_number_t state_count = THREAD_STATE_COUNT;
-    WRAP_MACH(thread_get_state(thread, THREAD_STATE_FLAVOR, (natural_t *) &state, &state_count), false);
+    MDBThreadState32 state;
+    mach_msg_type_number_t state_count = THREAD_STATE32_COUNT;
+    WRAP_MACH(thread_get_state(thread, THREAD_STATE32_FLAVOR, (natural_t *) &state, &state_count), false);
     if (isEnabled) {
         state.__eflags |= 0x100UL;
     } else {
         state.__eflags &= ~0x100UL;
     }
-    WRAP_MACH(thread_set_state(thread, THREAD_STATE_FLAVOR, (natural_t *) &state, state_count), false);
+    WRAP_MACH(thread_set_state(thread, THREAD_STATE32_FLAVOR, (natural_t *) &state, state_count), false);
     log.traceLn("%s single step flag for thread %d.", isEnabled ? "Set" : "Removed", thread);
     return true;
 }
@@ -455,9 +463,9 @@ MDBDebugger::setSingleStep(thread_t thread, void *arg) {
 bool
 MDBDebugger::enableSingleStep(MDBThread *thread, bool enable) {
     if (enable) {
-        thread->state.__eflags |= 0x100UL;
+        thread->state32.__eflags |= 0x100UL;
     } else {
-        thread->state.__eflags &= ~0x100UL;
+        thread->state32.__eflags &= ~0x100UL;
     }
     process->machCommitThread(thread);
     log.traceLn(MDBLog::DEBUG, "%s single step flag for thread %d", enable ? "set" : "removed", thread->thread);

@@ -48,12 +48,16 @@ private:
     mach_vm_address_t findAddress(uint32_t fileType, const char *imageName);
     MDBBreakpoint *onLibraryLoadedBreakpoint;
     void onLibraryLoaded(MDBBreakpoint *breakpoint);
+
+    mach_port_t profiling_port;
+
 public:
     bool running;
     bool initializeDylinkerHooks();
     MDBDebugger *debugger;
     mach_port_t task;
     pid_t pid;
+    bool is64Bit;
     MBList<MDBThread *> threads;
     MDBProcess(MDBDebugger *debugger, mach_port_t task, pid_t pid);
     virtual ~MDBProcess();
@@ -80,6 +84,10 @@ public:
     bool machSuspendAllThreads();
 
     void machSignalTerminated();
+
+    bool machIs64Bit();
+
+    void machSample();
 };
 
 #endif /* MDBPROCESS_H */

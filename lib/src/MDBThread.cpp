@@ -28,12 +28,12 @@ MDBThread::runStateName() {
 void
 MDBThread::logState() {
     log.traceLn("thread: %d, sc: %d sp: 0x%X, fp: 0x%X, pc: 0x%X, step: %s",
-        thread, info.suspend_count, state.__esp, state.__ebp, state.__eip,
-        state.__eflags & 0x100UL ? "yes" : "no");
+        thread, info.suspend_count, state32.__esp, state32.__ebp, state32.__eip,
+        state32.__eflags & 0x100UL ? "yes" : "no");
 }
 
 void
 MDBThread::updateInstructionPointerAndCommitState(int32_t offset) {
-    state.__eip += offset;
+    state32.__eip += offset;
     process->machCommitThread(this);
 }

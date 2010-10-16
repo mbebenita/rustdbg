@@ -30,6 +30,8 @@ public:
 
     void commandStep(char *line);
 
+    void commandProfile(char *line);
+
     void commandPrintBackTrace(char *line);
 
     static char *

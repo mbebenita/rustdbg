@@ -28,8 +28,8 @@ MDBStack::MDBStack(MDBThread *thread)
 void
 MDBStack::updateState() {
     // log("walking stack for thread: %d", thread->thread);
-    uintptr_t codeAddress = thread->state.__eip;
-    uintptr_t frameAddress = thread->state.__ebp;
+    uintptr_t codeAddress = thread->state32.__eip;
+    uintptr_t frameAddress = thread->state32.__ebp;
     size_t frameSize = 128;
     frames.clear();
     MDBStackFrame *frame = NULL;
@@ -63,7 +63,7 @@ MDBStack::updateState() {
 
 bool 
 MDBStack::isInteriorPointer(uintptr_t address) {
-    uintptr_t frameAddress = thread->state.__ebp;
+    uintptr_t frameAddress = thread->state32.__ebp;
     uintptr_t baseAddress = frameAddress + MAX_STACK_SIZE;
     return address >= baseAddress && address <= frameAddress;
 }

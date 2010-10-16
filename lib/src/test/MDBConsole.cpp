@@ -38,6 +38,8 @@ MDBConsole::MDBConsole(MBList<char*> &arguments) : processFileName(NULL) {
     commands.add(MDBCommand("step", "si", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandStep), MDBConsole::readlineCommandGenerator));
     commands.add(MDBCommand("break", "b", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandStep), MDBConsole::readlineSymbolGenerator));
 
+    commands.add(MDBCommand("profile", "p", new MBFunction<MDBConsole, void, char*> (this, &MDBConsole::commandProfile), MDBConsole::readlineCommandGenerator));
+
     logVersion();
 }
 
@@ -78,6 +80,11 @@ void
 MDBConsole::commandStep(char *line) {
     debugger.step(debugger.process->threads[0], false);
     debugger.process->logExecutionState("INFO");
+}
+
+void
+MDBConsole::commandProfile(char *line) {
+    debugger.process->machSample();
 }
 
 bool

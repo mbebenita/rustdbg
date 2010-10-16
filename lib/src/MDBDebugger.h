@@ -83,6 +83,8 @@ public:
     int write(vm_address_t dst, void *src, size_t size);
 
     bool resume();
+
+    bool profile();
 };
 
 class MDBDisassembler {

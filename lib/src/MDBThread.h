@@ -11,7 +11,8 @@ public:
     thread_t thread;
     MDBStack stack;
     MDBThreadInfo info;
-    MDBThreadState state;
+    MDBThreadState32 state32;
+    MDBThreadState64 state64;
     MDBThread(MDBProcess *process, thread_t thread);
     void onStateUpdated();
     void logState();
